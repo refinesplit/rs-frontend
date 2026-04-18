@@ -82,6 +82,7 @@ function getDefaultInvoiceData(invoiceNumber: string): InvoiceData {
     invoiceDate: new Date().toISOString().slice(0, 10),
     dueDate: "",
     businessLogoUrl: "",
+    invoiceTheme: "modern",
     currency: "INR",
     seller: getDefaultParty("seller"),
     client: getDefaultParty("client"),
@@ -291,7 +292,7 @@ export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
   }, [itemColumnsOpen]);
 
   const renderPartyBasicFields = (party: "seller" | "client", title: string) => (
-    <div className="space-y-3 rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4">
+    <div className="space-y-2.5 rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-3">
       <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title} Details</h3>
 
       <div>
@@ -306,7 +307,7 @@ export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
   );
 
   const renderPartyExtraFields = (party: "seller" | "client", title: string) => (
-    <div className="space-y-3 rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4">
+    <div className="space-y-2.5 rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-3">
       <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title} Extra Fields</h4>
 
       <div>
@@ -355,10 +356,10 @@ export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
 
   const renderStepContent = () => {
     return (
-      <div className="space-y-4">
-        <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-4">
+      <div className="space-y-2.5">
+        <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-3 space-y-2.5">
           <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Invoice</h3>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <Label className="mb-1.5 block">Invoice No *</Label>
               <Input
@@ -375,51 +376,50 @@ export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
                 onChange={(e) => updateField("invoiceDate", e.target.value)}
               />
             </div>
-          </div>
 
-          {enabledFields.dueDate && (
-            <div>
-              <Label className="mb-1.5 block">Due date</Label>
+            {enabledFields.dueDate && (
+              <div>
+                <Label className="mb-1.5 block">Due date</Label>
+                <Input
+                  type="date"
+                  value={formData.dueDate || ""}
+                  onChange={(e) => updateField("dueDate", e.target.value)}
+                />
+              </div>
+            )}
+
+            <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-2.5 lg:col-span-2">
+              <Label className="mb-1 block">Business Logo (optional)</Label>
               <Input
-                type="date"
-                value={formData.dueDate || ""}
-                onChange={(e) => updateField("dueDate", e.target.value)}
+                className="h-9"
+                type="file"
+                accept="image/png,image/jpeg"
+                onChange={(e) => handleLogoUpload(e.target.files?.[0])}
               />
             </div>
-          )}
-
-          <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-4">
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Add Business Logo (optional)</p>
-            <p className="text-xs text-slate-500 mt-1">Resolution up to 1080x1080px. PNG or JPEG file.</p>
-            <Input
-              className="mt-3"
-              type="file"
-              accept="image/png,image/jpeg"
-              onChange={(e) => handleLogoUpload(e.target.files?.[0])}
-            />
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-4">
           {renderPartyBasicFields("seller", "Your")}
           {renderPartyBasicFields("client", "Client's")}
+          {enabledFields.shipping && (
+            <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-3 2xl:col-span-2">
+              <Label className="mb-1.5 block">Add Shipping Details</Label>
+              <Textarea
+                value={formData.shippingDetails || ""}
+                onChange={(e) => updateField("shippingDetails", e.target.value)}
+                placeholder="Shipping details"
+                rows={2}
+              />
+            </div>
+          )}
         </div>
 
         {enabledFields.sellerExtra && renderPartyExtraFields("seller", "Your")}
         {enabledFields.clientExtra && renderPartyExtraFields("client", "Client")}
 
-        {enabledFields.shipping && (
-          <div>
-            <Label className="mb-1.5 block">Add Shipping Details</Label>
-            <Textarea
-              value={formData.shippingDetails || ""}
-              onChange={(e) => updateField("shippingDetails", e.target.value)}
-              placeholder="Shipping details"
-            />
-          </div>
-        )}
-
-        <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-4">
+        <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-3 space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Items</h3>
             <div className="relative" ref={itemColumnsRef}>
@@ -455,21 +455,14 @@ export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
               )}
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">Configure GST</p>
-                <Switch checked={formData.gstEnabled} onCheckedChange={(v) => updateField("gstEnabled", v)} />
-              </div>
-              <p className="mt-1 text-xs text-slate-500">Switch GST calculation for each line item.</p>
-            </div>
 
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <Label className="mb-1.5 block">Currency *</Label>
               <select
                 value={formData.currency}
                 onChange={(e) => updateField("currency", e.target.value)}
-                className="flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-violet-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-violet-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               >
                 {CURRENCIES.map((currency) => (
                   <option key={currency} value={currency}>
@@ -478,10 +471,17 @@ export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
                 ))}
               </select>
             </div>
+            <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">Configure GST</p>
+                <Switch checked={formData.gstEnabled} onCheckedChange={(v) => updateField("gstEnabled", v)} />
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Switch GST calculation for each line item.</p>
+            </div>
           </div>
 
           {formData.lineItems.map((item, index) => (
-            <div key={`line-item-${index}`} className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-3">
+            <div key={`line-item-${index}`} className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-3 space-y-2.5">
               <div
                 className={`grid gap-3 ${
                   enabledItemColumns.hsnSac || enabledItemColumns.gstRate
@@ -537,11 +537,13 @@ export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
                 <div>
                   <Label className="mb-1.5 block">Rate</Label>
                   <div className="relative">
-                    <IndianRupee className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                      <IndianRupee className="h-3.5 w-3.5" />
+                    </span>
                     <Input
                       type="number"
                       min={1}
-                      className="pl-8"
+                      className="pl-10"
                       value={item.rate}
                       onChange={(e) => updateLineItem(index, "rate", Number(e.target.value) || 1)}
                     />
@@ -595,9 +597,9 @@ export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
           </Button>
         </div>
 
-        <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-4">
+        <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-3 space-y-3">
           <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Totals & Extras</h3>
-          <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-2">
+          <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-3 space-y-2">
             <p className="text-sm font-semibold">Summary</p>
             <div className="flex justify-between text-sm text-slate-500">
               <span>Amount</span>
@@ -614,7 +616,7 @@ export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
           </div>
 
           {enabledFields.discountsCharges && (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <Label className="mb-1.5 block">Add Discounts</Label>
                 <Input
@@ -637,7 +639,7 @@ export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
           )}
 
           {enabledFields.notesTerms && (
-            <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-3">
+            <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-3 space-y-2.5">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold">Show Total In Words</p>
                 <Switch
@@ -666,7 +668,7 @@ export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
         </div>
 
         {enabledFields.recurringInvoice && (
-          <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-3">
+          <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-3 space-y-2.5">
             <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Recurring</h3>
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold">This is a recurring invoice</p>
@@ -680,7 +682,7 @@ export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
         )}
 
         {enabledFields.advancedOptions && (
-          <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-3">
+          <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-3 space-y-2.5">
             <p className="text-sm font-semibold">Advanced options</p>
 
             <div className="space-y-2.5 text-sm">
@@ -784,7 +786,10 @@ export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
   };
 
   return (
-    <div className="space-y-5" id="invoice-form">
+    <div
+      className="space-y-3 [&_input]:h-10 [&_input]:px-3 [&_input]:text-sm [&_textarea]:text-sm [&_select]:h-10 [&_select]:px-3 [&_select]:text-sm"
+      id="invoice-form"
+    >
       <div className="rounded-xl bg-slate-50 dark:bg-slate-800/30 p-3">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mr-2">Basic fields only</p>

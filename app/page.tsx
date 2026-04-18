@@ -4,6 +4,7 @@ import { Hero } from "@/components/landing/Hero";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { Benefits } from "@/components/landing/Benefits";
 import { PricingSection } from "@/components/landing/PricingSection";
+import { FaqSection } from "@/components/landing/FaqSection";
 
 type QueryValue = string | string[] | undefined;
 
@@ -29,6 +30,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <HowItWorks />
         <Benefits />
         <PricingSection region={regionFromUrl} />
+        <FaqSection region={regionFromUrl} />
       </main>
       <Footer />
     </>

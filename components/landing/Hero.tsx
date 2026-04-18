@@ -32,11 +32,11 @@ type HeroContent = {
 
 const HERO_BY_REGION: Record<SupportedRegion, HeroContent> = {
   IN: {
-    badgeText: "Now with PDF export & WhatsApp sharing",
+    badgeText: "Everything runs in your browser",
     headlineStart: "Invoices that get you",
     headlineAccent: "paid faster",
     subtitle:
-      "Create, send, and share professional invoices in seconds. No design skills needed — fill in your details, generate, and share via WhatsApp or PDF.",
+      "Create, send, and share professional invoices in seconds. No design skills needed - fill in your details, generate, and share via WhatsApp or PDF. No signup needed unless you explicitly want to save and reuse invoices.",
     primaryCta: "Start for free",
     secondaryCta: "See how it works",
     tableHeaders: ["Description", "Qty", "Rate", "Amount"],
@@ -106,11 +106,11 @@ const HERO_BY_REGION: Record<SupportedRegion, HeroContent> = {
     ],
   },
   US: {
-    badgeText: "Now with PDF export & WhatsApp sharing",
+    badgeText: "Everything runs in your browser",
     headlineStart: "Invoices that help you",
     headlineAccent: "get paid faster",
     subtitle:
-      "Create and share polished invoices in seconds. Fill in details, generate instantly, and send by WhatsApp or PDF.",
+      "Create and share polished invoices in seconds. Fill in details, generate instantly, and send by WhatsApp or PDF. No signup needed unless you explicitly want to save and reuse invoices.",
     primaryCta: "Start for free",
     secondaryCta: "See how it works",
     tableHeaders: ["Description", "Qty", "Rate", "Amount"],
@@ -179,11 +179,11 @@ const HERO_BY_REGION: Record<SupportedRegion, HeroContent> = {
     ],
   },
   EU: {
-    badgeText: "Jetzt mit PDF-Export und WhatsApp-Versand",
+    badgeText: "Alles laeuft direkt im Browser",
     headlineStart: "Rechnungen, mit denen du",
     headlineAccent: "schneller bezahlt wirst",
     subtitle:
-      "Erstelle und teile professionelle Rechnungen in Sekunden. Details eintragen, sofort erzeugen und per WhatsApp oder PDF senden.",
+      "Erstelle und teile professionelle Rechnungen in Sekunden. Details eintragen, sofort erzeugen und per WhatsApp oder PDF senden. Keine Registrierung noetig, ausser du willst Rechnungen explizit speichern und wiederverwenden.",
     primaryCta: "Kostenlos starten",
     secondaryCta: "So funktioniert es",
     tableHeaders: ["Beschreibung", "Menge", "Satz", "Betrag"],
