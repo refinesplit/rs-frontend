@@ -37,15 +37,12 @@ export function Logo({
   variant = "default",
   className,
 }: LogoProps) {
-  const bgFill =
-    variant === "light" ? "#ffffff"
-    : variant === "mono"  ? "currentColor"
-    : "#0f2d5a";
-
-  const markFill =
-    variant === "light" ? "#0f2d5a"
-    : variant === "mono"  ? "white"
-    : "#ffffff";
+  const logoSrc =
+    variant === "light"
+      ? "/logo-light.svg"
+      : variant === "mono"
+        ? "/logo-mono.svg"
+        : "/logo.svg";
 
   const fontSize = Math.round(size * 0.58);
   const gap = Math.round(size * 0.35);
@@ -60,56 +57,13 @@ export function Logo({
       role="img"
       aria-label="Refine logo"
     >
-      {/* ── Icon mark ── */}
-      <svg
+      <img
+        src={logoSrc}
         width={size}
         height={size}
-        viewBox="0 0 100 100"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
+        alt="RefineSplit logo"
         style={{ flexShrink: 0 }}
-      >
-        {/* Rounded-square container */}
-        <rect
-          width="100"
-          height="100"
-          rx="22"
-          fill={bgFill}
-        />
-
-        {/*
-          Custom geometric "R" — original SVG path, no font used.
-
-          Construction:
-            • Vertical spine: left column from top to bottom
-            • Bowl: a D-shaped arch on the upper right (closes at midline)
-            • Leg: drops from midline, kicks at ~40° upward to the right
-              (the angled terminal evokes an upward trend/arrow)
-        */}
-        <path
-          d={`
-            M 28 20
-            L 28 80
-            L 40 80
-            L 40 56
-            L 56.5 56
-            L 69 78
-            L 82 78
-            L 68 54
-            C 74 51 78 44 78 36
-            C 78 26 70 20 59 20
-            Z
-            M 40 30
-            L 57 30
-            C 63 30 67 33 67 37
-            C 67 42 63 46 57 46
-            L 40 46
-            Z
-          `}
-          fill={markFill}
-          fillRule="evenodd"
-        />
-      </svg>
+      />
 
       {/* ── Optional wordmark ── */}
       {wordmark && (
