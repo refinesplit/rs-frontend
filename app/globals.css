@@ -1,26 +1,180 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ─── Dark mode: .dark class strategy for next-themes ─── */
+@variant dark (&:where(.dark, .dark *));
 
+/* ─── Font ─── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base ─── */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Motion Utilities ─── */
+@keyframes rs-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rs-fade-right {
+  from {
+    opacity: 0;
+    transform: translateX(22px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes rs-float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes rs-orbit {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rs-pulse-glow {
+  0% {
+    opacity: 0.45;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.03);
+  }
+  100% {
+    opacity: 0.45;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes rs-shimmer {
+  0% {
+    background-position: -220% 0;
+  }
+  100% {
+    background-position: 220% 0;
+  }
+}
+
+.rs-reveal-up {
+  opacity: 0;
+  animation: rs-fade-up 700ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+.rs-reveal-right {
+  opacity: 0;
+  animation: rs-fade-right 800ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+.rs-float {
+  animation: rs-float 5.5s ease-in-out infinite;
+}
+
+.rs-orbit {
+  animation: rs-orbit 18s linear infinite;
+}
+
+.rs-glow {
+  animation: rs-pulse-glow 3.2s ease-in-out infinite;
+}
+
+.rs-shimmer {
+  background: linear-gradient(90deg, rgba(24, 95, 165, 0.06) 0%, rgba(24, 95, 165, 0.18) 48%, rgba(24, 95, 165, 0.06) 100%);
+  background-size: 220% 100%;
+  animation: rs-shimmer 1.8s linear infinite;
+}
+
+.rs-delay-1 { animation-delay: 80ms; }
+.rs-delay-2 { animation-delay: 160ms; }
+.rs-delay-3 { animation-delay: 240ms; }
+.rs-delay-4 { animation-delay: 320ms; }
+.rs-delay-5 { animation-delay: 400ms; }
+.rs-delay-6 { animation-delay: 480ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-reveal-up,
+  .rs-reveal-right,
+  .rs-float,
+  .rs-orbit,
+  .rs-glow,
+  .rs-shimmer {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #185FA5; }
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
+
+/* ─── Selection ─── */
+::selection { background: #E6F1FB; color: #185FA5; }
+.dark ::selection { background: #0d2540; color: #4d9de0; }
+
+/* ─── Focus ─── */
+:focus-visible {
+  outline: 2px solid #185FA5;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ─── Print: hide everything except invoice ─── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  header, footer, nav, .no-print { display: none !important; }
+  html, body {
+    background: #fff !important;
+  }
+  body * { visibility: hidden; }
+  #invoice-preview, #invoice-preview * { visibility: visible; }
+  #invoice-preview {
+    position: static !important;
+    inset: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 0 !important;
+  }
 }

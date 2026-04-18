@@ -1,0 +1,876 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import {
+  Eye,
+  IndianRupee,
+  Plus,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { InvoiceData, LineItem, PartyDetails } from "./InvoicePreview";
+
+interface InvoiceFormProps {
+  invoiceNumber: string;
+  onPreview: (data: InvoiceData) => void;
+}
+
+const CURRENCIES = ["INR", "USD", "EUR", "GBP"];
+
+type OptionalFieldKey =
+  | "dueDate"
+  | "sellerExtra"
+  | "clientExtra"
+  | "shipping"
+  | "itemAdvanced"
+  | "discountsCharges"
+  | "notesTerms"
+  | "additionalInfo"
+  | "contactDetails"
+  | "recurringInvoice"
+  | "advancedOptions";
+
+const OPTIONAL_FIELD_OPTIONS: Array<{ key: OptionalFieldKey; label: string }> = [
+  { key: "dueDate", label: "Due date" },
+  { key: "sellerExtra", label: "Your extra details" },
+  { key: "clientExtra", label: "Client extra details" },
+  { key: "shipping", label: "Shipping details" },
+  { key: "itemAdvanced", label: "Item advanced columns" },
+  { key: "discountsCharges", label: "Discounts & charges" },
+  { key: "notesTerms", label: "Notes & terms" },
+  { key: "additionalInfo", label: "Additional info" },
+  { key: "contactDetails", label: "Contact details" },
+  { key: "recurringInvoice", label: "Recurring invoice" },
+  { key: "advancedOptions", label: "Advanced options" },
+];
+
+function getDefaultParty(label: "seller" | "client"): PartyDetails {
+  return {
+    businessName: "",
+    phone: "",
+    gstin: "",
+    address: "",
+    city: "",
+    postalCode: "",
+    state: "",
+    email: "",
+    pan: "",
+    customField: "",
+  };
+}
+
+function getDefaultLineItem(): LineItem {
+  return {
+    item: "",
+    hsnSac: "",
+    gstRate: 18,
+    quantity: 1,
+    rate: 1,
+    description: "",
+  };
+}
+
+function getDefaultInvoiceData(invoiceNumber: string): InvoiceData {
+  return {
+    invoiceNo: invoiceNumber || "A00001",
+    invoiceDate: new Date().toISOString().slice(0, 10),
+    dueDate: "",
+    businessLogoUrl: "",
+    currency: "INR",
+    seller: getDefaultParty("seller"),
+    client: getDefaultParty("client"),
+    lineItems: [getDefaultLineItem()],
+    gstEnabled: true,
+    discount: 0,
+    additionalCharges: 0,
+    roundOff: "none",
+    notes: "",
+    terms: "",
+    additionalInfo: "",
+    contactDetails: "",
+    shippingDetails: "",
+    recurringInvoice: false,
+    showTotalInWords: true,
+    advancedOptions: {
+      hidePlaceOfSupply: false,
+      showTaxSummary: true,
+      showHsnSummary: false,
+      showOriginalImages: false,
+      showThumbnails: false,
+      showDescriptionFullWidth: false,
+      hideSubtotalForGroupItems: false,
+      showSku: false,
+      showSerialNumbers: false,
+      displayBatchDetails: false,
+    },
+  };
+}
+
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return <p className="text-[11px] font-medium text-red-500 mt-1.5">{msg}</p>;
+}
+
+export function InvoiceForm({ invoiceNumber, onPreview }: InvoiceFormProps) {
+  const [formData, setFormData] = useState<InvoiceData>(() => getDefaultInvoiceData(invoiceNumber));
+  const [error, setError] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement | null>(null);
+  const [itemColumnsOpen, setItemColumnsOpen] = useState(false);
+  const itemColumnsRef = useRef<HTMLDivElement | null>(null);
+  const [enabledFields, setEnabledFields] = useState<Record<OptionalFieldKey, boolean>>({
+    dueDate: false,
+    sellerExtra: false,
+    clientExtra: false,
+    shipping: false,
+    itemAdvanced: false,
+    discountsCharges: false,
+    notesTerms: false,
+    additionalInfo: false,
+    contactDetails: false,
+    recurringInvoice: false,
+    advancedOptions: false,
+  });
+  const [enabledItemColumns, setEnabledItemColumns] = useState({
+    hsnSac: false,
+    gstRate: false,
+    total: true,
+    description: false,
+  });
+
+  const updateField = <K extends keyof InvoiceData>(key: K, value: InvoiceData[K]) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const updatePartyField = (party: "seller" | "client", key: keyof PartyDetails, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [party]: {
+        ...prev[party],
+        [key]: value,
+      },
+    }));
+  };
+
+  const updateLineItem = (index: number, key: keyof LineItem, value: string | number) => {
+    setFormData((prev) => ({
+      ...prev,
+      lineItems: prev.lineItems.map((item, idx) =>
+        idx === index ? { ...item, [key]: value } : item
+      ),
+    }));
+  };
+
+  const addLineItem = () => {
+    setFormData((prev) => ({ ...prev, lineItems: [...prev.lineItems, getDefaultLineItem()] }));
+  };
+
+  const removeLineItem = (index: number) => {
+    setFormData((prev) => {
+      if (prev.lineItems.length === 1) return prev;
+      return {
+        ...prev,
+        lineItems: prev.lineItems.filter((_, idx) => idx !== index),
+      };
+    });
+  };
+
+  const updateAdvancedOption = (key: keyof NonNullable<InvoiceData["advancedOptions"]>, value: boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      advancedOptions: {
+        ...prev.advancedOptions,
+        [key]: value,
+      },
+    }));
+  };
+
+  const subtotal = formData.lineItems.reduce((sum, item) => sum + item.quantity * item.rate, 0);
+  const taxTotal = formData.gstEnabled
+    ? formData.lineItems.reduce((sum, item) => sum + (item.quantity * item.rate * item.gstRate) / 100, 0)
+    : 0;
+
+  let total = subtotal + taxTotal - formData.discount + formData.additionalCharges;
+  if (formData.roundOff === "up") total = Math.ceil(total);
+  if (formData.roundOff === "down") total = Math.floor(total);
+
+  const runPreview = () => {
+    setError("");
+    onPreview({ ...formData, invoiceNo: formData.invoiceNo || invoiceNumber });
+  };
+
+  const onFinalGenerate = () => {
+    if (!formData.seller.businessName.trim()) {
+      setError("Your business name is required.");
+      return;
+    }
+    if (!formData.client.businessName.trim()) {
+      setError("Client business name is required.");
+      return;
+    }
+    if (!formData.lineItems[0]?.item.trim()) {
+      setError("At least one line item is required.");
+      return;
+    }
+
+    setError("");
+    runPreview();
+  };
+
+  const handleLogoUpload = (file?: File) => {
+    if (!file) return;
+    const isAllowedType = file.type === "image/png" || file.type === "image/jpeg";
+    if (!isAllowedType) {
+      setError("Logo must be PNG or JPEG.");
+      return;
+    }
+    const imageUrl = URL.createObjectURL(file);
+    updateField("businessLogoUrl", imageUrl);
+  };
+
+  const addOptionalField = (key: OptionalFieldKey) => {
+    setEnabledFields((prev) => ({ ...prev, [key]: true }));
+  };
+
+  const addOptionalFields = (keys: OptionalFieldKey[]) => {
+    setEnabledFields((prev) => {
+      const next = { ...prev };
+      keys.forEach((key) => {
+        next[key] = true;
+      });
+      return next;
+    });
+  };
+
+  const removeOptionalField = (key: OptionalFieldKey) => {
+    setEnabledFields((prev) => ({ ...prev, [key]: false }));
+  };
+
+  const toggleOptionalField = (key: OptionalFieldKey) => {
+    setEnabledFields((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleItemColumn = (key: keyof typeof enabledItemColumns) => {
+    setEnabledItemColumns((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (!pickerRef.current?.contains(event.target as Node)) {
+        setPickerOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleDocumentClick);
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentClick);
+    };
+  }, [pickerOpen]);
+
+  useEffect(() => {
+    if (!itemColumnsOpen) return;
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (!itemColumnsRef.current?.contains(event.target as Node)) {
+        setItemColumnsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleDocumentClick);
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentClick);
+    };
+  }, [itemColumnsOpen]);
+
+  const renderPartyBasicFields = (party: "seller" | "client", title: string) => (
+    <div className="space-y-3 rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4">
+      <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title} Details</h3>
+
+      <div>
+        <Label className="mb-1.5 block">{title} Business Name (required)</Label>
+        <Input
+          value={formData[party].businessName}
+          onChange={(e) => updatePartyField(party, "businessName", e.target.value)}
+          placeholder="Business name"
+        />
+      </div>
+    </div>
+  );
+
+  const renderPartyExtraFields = (party: "seller" | "client", title: string) => (
+    <div className="space-y-3 rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4">
+      <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title} Extra Fields</h4>
+
+      <div>
+        <Label className="mb-1.5 block">GSTIN (optional)</Label>
+        <Input
+          value={formData[party].gstin || ""}
+          onChange={(e) => updatePartyField(party, "gstin", e.target.value)}
+          placeholder="GSTIN"
+        />
+      </div>
+
+      <div>
+        <Label className="mb-1.5 block">Address (optional)</Label>
+        <Textarea
+          value={formData[party].address || ""}
+          onChange={(e) => updatePartyField(party, "address", e.target.value)}
+          placeholder="Address"
+          rows={2}
+        />
+      </div>
+
+      {party === "client" && (
+        <>
+          <div>
+            <Label className="mb-1.5 block">Client WhatsApp (optional)</Label>
+            <Input
+              value={formData.client.phone}
+              onChange={(e) => updatePartyField("client", "phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
+              placeholder="10-digit WhatsApp number"
+              maxLength={10}
+            />
+          </div>
+          <div>
+            <Label className="mb-1.5 block">Client Email (optional)</Label>
+            <Input
+              type="email"
+              value={formData.client.email || ""}
+              onChange={(e) => updatePartyField("client", "email", e.target.value)}
+              placeholder="client@company.com"
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  const renderStepContent = () => {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-4">
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Invoice</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label className="mb-1.5 block">Invoice No *</Label>
+              <Input
+                value={formData.invoiceNo}
+                onChange={(e) => updateField("invoiceNo", e.target.value)}
+                placeholder="A00001"
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Invoice Date *</Label>
+              <Input
+                type="date"
+                value={formData.invoiceDate}
+                onChange={(e) => updateField("invoiceDate", e.target.value)}
+              />
+            </div>
+          </div>
+
+          {enabledFields.dueDate && (
+            <div>
+              <Label className="mb-1.5 block">Due date</Label>
+              <Input
+                type="date"
+                value={formData.dueDate || ""}
+                onChange={(e) => updateField("dueDate", e.target.value)}
+              />
+            </div>
+          )}
+
+          <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-4">
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Add Business Logo (optional)</p>
+            <p className="text-xs text-slate-500 mt-1">Resolution up to 1080x1080px. PNG or JPEG file.</p>
+            <Input
+              className="mt-3"
+              type="file"
+              accept="image/png,image/jpeg"
+              onChange={(e) => handleLogoUpload(e.target.files?.[0])}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          {renderPartyBasicFields("seller", "Your")}
+          {renderPartyBasicFields("client", "Client's")}
+        </div>
+
+        {enabledFields.sellerExtra && renderPartyExtraFields("seller", "Your")}
+        {enabledFields.clientExtra && renderPartyExtraFields("client", "Client")}
+
+        {enabledFields.shipping && (
+          <div>
+            <Label className="mb-1.5 block">Add Shipping Details</Label>
+            <Textarea
+              value={formData.shippingDetails || ""}
+              onChange={(e) => updateField("shippingDetails", e.target.value)}
+              placeholder="Shipping details"
+            />
+          </div>
+        )}
+
+        <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Items</h3>
+            <div className="relative" ref={itemColumnsRef}>
+              <button
+                type="button"
+                onClick={() => setItemColumnsOpen((prev) => !prev)}
+                className="h-8 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 inline-flex items-center"
+              >
+                + Item columns
+              </button>
+              {itemColumnsOpen && (
+                <div className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                  <p className="text-xs font-semibold text-slate-500 mb-2">Select columns</p>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                      <input type="checkbox" checked={enabledItemColumns.hsnSac} onChange={() => toggleItemColumn("hsnSac")} />
+                      HSN/SAC
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                      <input type="checkbox" checked={enabledItemColumns.gstRate} onChange={() => toggleItemColumn("gstRate")} />
+                      GST Rate
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                      <input type="checkbox" checked={enabledItemColumns.total} onChange={() => toggleItemColumn("total")} />
+                      Total
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                      <input type="checkbox" checked={enabledItemColumns.description} onChange={() => toggleItemColumn("description")} />
+                      Description
+                    </label>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">Configure GST</p>
+                <Switch checked={formData.gstEnabled} onCheckedChange={(v) => updateField("gstEnabled", v)} />
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Switch GST calculation for each line item.</p>
+            </div>
+
+            <div>
+              <Label className="mb-1.5 block">Currency *</Label>
+              <select
+                value={formData.currency}
+                onChange={(e) => updateField("currency", e.target.value)}
+                className="flex h-12 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-violet-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              >
+                {CURRENCIES.map((currency) => (
+                  <option key={currency} value={currency}>
+                    {currency}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {formData.lineItems.map((item, index) => (
+            <div key={`line-item-${index}`} className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-3">
+              <div
+                className={`grid gap-3 ${
+                  enabledItemColumns.hsnSac || enabledItemColumns.gstRate
+                    ? "md:grid-cols-[2fr_1.2fr_1fr_1fr_1fr_1fr_0.5fr]"
+                    : enabledItemColumns.total
+                      ? "md:grid-cols-[2.5fr_1fr_1fr_1fr_0.5fr]"
+                      : "md:grid-cols-[3fr_1fr_1fr_0.5fr]"
+                }`}
+              >
+                <div>
+                  <Label className="mb-1.5 block">Item</Label>
+                  <Input
+                    value={item.item}
+                    onChange={(e) => updateLineItem(index, "item", e.target.value)}
+                    placeholder="Item"
+                  />
+                </div>
+                {enabledItemColumns.hsnSac && (
+                  <div>
+                    <Label className="mb-1.5 block">HSN/SAC</Label>
+                    <Input
+                      value={item.hsnSac || ""}
+                      onChange={(e) => updateLineItem(index, "hsnSac", e.target.value)}
+                      placeholder="HSN/SAC"
+                    />
+                  </div>
+                )}
+                {enabledItemColumns.gstRate && (
+                  <div>
+                    <Label className="mb-1.5 block">GST Rate</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={28}
+                        value={item.gstRate}
+                        onChange={(e) => updateLineItem(index, "gstRate", Number(e.target.value) || 0)}
+                        placeholder="18"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">%</span>
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <Label className="mb-1.5 block">Quantity</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={item.quantity}
+                    onChange={(e) => updateLineItem(index, "quantity", Number(e.target.value) || 1)}
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1.5 block">Rate</Label>
+                  <div className="relative">
+                    <IndianRupee className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      type="number"
+                      min={1}
+                      className="pl-8"
+                      value={item.rate}
+                      onChange={(e) => updateLineItem(index, "rate", Number(e.target.value) || 1)}
+                    />
+                  </div>
+                </div>
+                {enabledItemColumns.total && (
+                  <div>
+                    <Label className="mb-1.5 block">Total</Label>
+                    <Input
+                      value={(item.quantity * item.rate).toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                      readOnly
+                      className="bg-slate-50 dark:bg-slate-800/60"
+                    />
+                  </div>
+                )}
+                <div className="flex items-end">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    type="button"
+                    onClick={() => removeLineItem(index)}
+                    className="text-red-500 hover:text-red-600"
+                    aria-label="Remove line"
+                    title="Remove line"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {enabledItemColumns.description && (
+                <div>
+                  <Label className="mb-1.5 block">Add Description</Label>
+                  <Textarea
+                    value={item.description || ""}
+                    onChange={(e) => updateLineItem(index, "description", e.target.value)}
+                    placeholder="Description"
+                    rows={2}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+
+          <Button type="button" variant="outline" onClick={addLineItem} className="w-full">
+            <Plus className="h-4 w-4" />
+            Add New Line
+          </Button>
+        </div>
+
+        <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-4">
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Totals & Extras</h3>
+          <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-2">
+            <p className="text-sm font-semibold">Summary</p>
+            <div className="flex justify-between text-sm text-slate-500">
+              <span>Amount</span>
+              <span>{formData.currency} {subtotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex justify-between text-sm text-slate-500">
+              <span>Tax</span>
+              <span>{formData.currency} {taxTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex justify-between border-t pt-2 font-semibold text-slate-800 dark:text-slate-200">
+              <span>Total</span>
+              <span>{formData.currency} {total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+
+          {enabledFields.discountsCharges && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <Label className="mb-1.5 block">Add Discounts</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={formData.discount}
+                  onChange={(e) => updateField("discount", Number(e.target.value) || 0)}
+                />
+              </div>
+              <div>
+                <Label className="mb-1.5 block">Add Additional Charges</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={formData.additionalCharges}
+                  onChange={(e) => updateField("additionalCharges", Number(e.target.value) || 0)}
+                />
+              </div>
+            </div>
+          )}
+
+          {enabledFields.notesTerms && (
+            <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">Show Total In Words</p>
+                <Switch
+                  checked={formData.showTotalInWords}
+                  onCheckedChange={(v) => updateField("showTotalInWords", v)}
+                />
+              </div>
+              <div>
+                <Label className="mb-1.5 block">Notes</Label>
+                <Textarea
+                  value={formData.notes || ""}
+                  onChange={(e) => updateField("notes", e.target.value)}
+                  placeholder="Add Notes"
+                />
+              </div>
+              <div>
+                <Label className="mb-1.5 block">Terms & Conditions</Label>
+                <Textarea
+                  value={formData.terms || ""}
+                  onChange={(e) => updateField("terms", e.target.value)}
+                  placeholder="Add Terms & Conditions"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {enabledFields.recurringInvoice && (
+          <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Recurring</h3>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold">This is a recurring invoice</p>
+              <Switch
+                checked={formData.recurringInvoice}
+                onCheckedChange={(v) => updateField("recurringInvoice", v)}
+              />
+            </div>
+            <p className="text-xs text-slate-500">A draft invoice will be created with the same details every next period.</p>
+          </div>
+        )}
+
+        {enabledFields.advancedOptions && (
+          <div className="rounded-xl border border-slate-200/70 dark:border-white/[0.07] p-4 space-y-3">
+            <p className="text-sm font-semibold">Advanced options</p>
+
+            <div className="space-y-2.5 text-sm">
+              <label className="flex items-center justify-between">
+                <span>Show tax summary in invoice</span>
+                <Switch
+                  checked={Boolean(formData.advancedOptions?.showTaxSummary)}
+                  onCheckedChange={(v) => updateAdvancedOption("showTaxSummary", v)}
+                />
+              </label>
+            <label className="flex items-center justify-between">
+              <span>Hide place/country of supply</span>
+              <Switch
+                checked={Boolean(formData.advancedOptions?.hidePlaceOfSupply)}
+                onCheckedChange={(v) => updateAdvancedOption("hidePlaceOfSupply", v)}
+              />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>Show HSN summary in invoice</span>
+              <Switch
+                checked={Boolean(formData.advancedOptions?.showHsnSummary)}
+                onCheckedChange={(v) => updateAdvancedOption("showHsnSummary", v)}
+              />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>Add original images in line items</span>
+              <Switch
+                checked={Boolean(formData.advancedOptions?.showOriginalImages)}
+                onCheckedChange={(v) => updateAdvancedOption("showOriginalImages", v)}
+              />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>Show thumbnails in separate column</span>
+              <Switch
+                checked={Boolean(formData.advancedOptions?.showThumbnails)}
+                onCheckedChange={(v) => updateAdvancedOption("showThumbnails", v)}
+              />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>Show description in full width</span>
+              <Switch
+                checked={Boolean(formData.advancedOptions?.showDescriptionFullWidth)}
+                onCheckedChange={(v) => updateAdvancedOption("showDescriptionFullWidth", v)}
+              />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>Hide subtotal for group items</span>
+              <Switch
+                checked={Boolean(formData.advancedOptions?.hideSubtotalForGroupItems)}
+                onCheckedChange={(v) => updateAdvancedOption("hideSubtotalForGroupItems", v)}
+              />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>Show SKU in Invoice</span>
+              <Switch
+                checked={Boolean(formData.advancedOptions?.showSku)}
+                onCheckedChange={(v) => updateAdvancedOption("showSku", v)}
+              />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>Show Serial Numbers in Invoice</span>
+              <Switch
+                checked={Boolean(formData.advancedOptions?.showSerialNumbers)}
+                onCheckedChange={(v) => updateAdvancedOption("showSerialNumbers", v)}
+              />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>Display Batch Details in columns</span>
+              <Switch
+                checked={Boolean(formData.advancedOptions?.displayBatchDetails)}
+                onCheckedChange={(v) => updateAdvancedOption("displayBatchDetails", v)}
+              />
+            </label>
+            </div>
+          </div>
+        )}
+
+        {enabledFields.additionalInfo && (
+          <div>
+            <Label className="mb-1.5 block">Additional Info</Label>
+            <Textarea
+              value={formData.additionalInfo || ""}
+              onChange={(e) => updateField("additionalInfo", e.target.value)}
+              placeholder="Add Additional Info"
+            />
+          </div>
+        )}
+
+        {enabledFields.contactDetails && (
+          <div>
+            <Label className="mb-1.5 block">Contact Details</Label>
+            <Textarea
+              value={formData.contactDetails || ""}
+              onChange={(e) => updateField("contactDetails", e.target.value)}
+              placeholder="Add Contact Details"
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-5" id="invoice-form">
+      <div className="rounded-xl bg-slate-50 dark:bg-slate-800/30 p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mr-2">Basic fields only</p>
+
+          <div className="relative" ref={pickerRef}>
+            <button
+              type="button"
+              onClick={() => setPickerOpen((prev) => !prev)}
+              className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 inline-flex items-center"
+            >
+              + Add fields (multi-select)
+            </button>
+            {pickerOpen && (
+              <div className="absolute z-20 mt-2 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-xs font-semibold text-slate-500">Select one or more fields</p>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setPickerOpen(false)}>
+                    Close
+                  </Button>
+                </div>
+                <div className="max-h-52 overflow-y-auto space-y-2">
+                  {OPTIONAL_FIELD_OPTIONS.map((opt) => (
+                    <label key={opt.key} className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={enabledFields[opt.key]}
+                        onChange={() => toggleOptionalField(opt.key)}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setPickerOpen(false)}>
+                    Done
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button type="button" size="sm" variant="ghost" onClick={() => addOptionalFields(["dueDate", "sellerExtra", "clientExtra"])}>
+            Suggest: Business Pack
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => addOptionalFields(["discountsCharges", "notesTerms", "advancedOptions"])}>
+            Suggest: Accounting Pack
+          </Button>
+
+          <div className="ml-auto">
+            <Button type="button" variant="secondary" size="sm" onClick={runPreview} id="preview-anytime-btn">
+              <Eye className="h-3.5 w-3.5" />
+              Preview Anytime
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {OPTIONAL_FIELD_OPTIONS.filter((opt) => enabledFields[opt.key]).map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => removeOptionalField(opt.key)}
+              className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-1 text-[11px] font-medium text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
+            >
+              {opt.label}
+              <X className="h-3 w-3" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {renderStepContent()}
+
+      {error && <FieldError msg={error} />}
+
+      <div className="flex flex-wrap items-center gap-2 pt-2">
+        <Button type="button" onClick={onFinalGenerate} id="generate-invoice-submit">
+          <Sparkles className="h-4 w-4" />
+          Generate Preview
+        </Button>
+
+        <Button type="button" variant="secondary" onClick={runPreview}>
+          <Eye className="h-4 w-4" />
+          Preview Now
+        </Button>
+      </div>
+    </div>
+  );
+}
